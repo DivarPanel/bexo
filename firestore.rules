@@ -1,0 +1,95 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function me() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
+    function active() { return signedIn() && me().active == true; }
+    function admin() { return active() && me().role == "admin"; }
+    function myStore() { return me().storeId; }
+    function sameStore(storeId) { return active() && myStore() == storeId; }
+    function notClosed(storeId) {
+      return !exists(/databases/$(database)/documents/dailyClosures/$(storeId + "_" + request.resource.data.businessDate));
+    }
+    match /users/{uid} {
+      allow read: if admin() || (signedIn() && request.auth.uid == uid);
+      // Provision users from trusted Admin SDK / Firebase Console, not public client.
+      allow create, update, delete: if false;
+    }
+    match /stores/{storeId} {
+      allow read: if active();
+      allow write: if admin();
+    }
+    match /products/{productId} {
+      allow read: if active();
+      allow create, update, delete: if admin();
+    }
+    match /storeInventory/{inventoryId} {
+      allow read: if active(); // All store stock is viewable; client writes are prohibited.
+      allow write: if false;
+    }
+    match /sales/{saleId} {
+      allow read: if admin() || (active() && resource.data.storeId == myStore());
+      allow create: if active()
+        && request.resource.data.storeId == (admin() ? request.resource.data.storeId : myStore())
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.status == "recorded"
+        && request.resource.data.total is number
+        && request.resource.data.total >= 0
+        && notClosed(request.resource.data.storeId);
+      allow update, delete: if false;
+    }
+    match /customers/{customerId} {
+      allow read: if admin() || (active() && resource.data.storeId == myStore());
+      allow create: if active()
+        && request.resource.data.storeId == (admin() ? request.resource.data.storeId : myStore())
+        && request.resource.data.createdBy == request.auth.uid;
+      allow update: if admin() || (active() && resource.data.storeId == myStore()
+        && request.resource.data.storeId == resource.data.storeId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["name","phone","address","note","updatedAt"]));
+      allow delete: if false;
+    }
+    match /expenses/{expenseId} {
+      allow read: if admin() || (active() && resource.data.storeId == myStore());
+      allow create: if active()
+        && request.resource.data.storeId == (admin() ? request.resource.data.storeId : myStore())
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.amount is number
+        && request.resource.data.amount > 0
+        && notClosed(request.resource.data.storeId);
+      allow update, delete: if false;
+    }
+    match /goodsReceipts/{receiptId} {
+      allow read: if admin() || (active() && resource.data.storeId == myStore());
+      allow create: if active()
+        && request.resource.data.storeId == (admin() ? request.resource.data.storeId : myStore())
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.status == "pending_approval"
+        && notClosed(request.resource.data.storeId);
+      allow update, delete: if admin() && resource.data.status == "pending_approval";
+    }
+    match /dailyClosures/{closureId} {
+      allow read: if admin() || (active() && resource.data.storeId == myStore());
+      allow create, update, delete: if false; // Only trusted Cloud Function may create closures.
+    }
+    match /activityLogs/{logId} {
+      allow read: if admin() || (active() && resource.data.storeId == myStore());
+      allow create, update, delete: if false; // Server-created audit log only.
+    }
+    match /correctionDocuments/{docId} {
+      allow read: if admin() || (active() && resource.data.storeId == myStore());
+      allow create: if active()
+        && request.resource.data.storeId == (admin() ? request.resource.data.storeId : myStore())
+        && request.resource.data.createdBy == request.auth.uid;
+      allow update, delete: if false;
+    }
+    match /notifications/{notificationId} {
+      allow read: if admin() || (active() && (resource.data.storeId == myStore() || resource.data.storeId == null));
+      allow write: if admin();
+    }
+    match /tasks/{taskId} {
+      allow read: if admin() || (active() && (resource.data.storeId == myStore() || resource.data.assigneeUid == request.auth.uid));
+      allow write: if admin();
+    }
+    match /{document=**} { allow read, write: if false; }
+  }
+}

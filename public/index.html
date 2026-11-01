@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="az">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#14213d">
+<title>Biznes İdarəetmə Sistemi</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<div id="loginView" class="login-wrap">
+  <form id="loginForm" class="login-card">
+    <div class="brandmark">◆</div><h1>Biznes İdarəetmə</h1>
+    <p class="muted">Müstəqil mağaza idarəetmə platforması</p>
+    <label>E-mail<input id="email" type="email" autocomplete="username" required placeholder="admin@example.com"></label>
+    <label>Şifrə<input id="password" type="password" autocomplete="current-password" required placeholder="Şifrəniz"></label>
+    <button class="primary full" type="submit">Daxil ol</button>
+    <p id="loginError" class="error"></p>
+    <small>İlk giriş üçün Firebase Authentication hesabı və Firestore users sənədi yaradılmalıdır. Təlimata baxın.</small>
+  </form>
+</div>
+
+<div id="appView" class="app-shell hidden">
+  <aside class="sidebar">
+    <div class="brand">◆ BİZNES İDARƏETMƏ <small>Müstəqil platforma</small></div>
+    <div class="userbox"><b id="userName">İstifadəçi</b><small id="userRole"></small><small id="userStore"></small></div>
+    <nav id="nav">
+      <button class="nav-btn active" data-page="dashboard">▦ Ümumi panel</button>
+      <button class="nav-btn" data-page="stores" data-admin>▣ Mağazalar</button>
+      <button class="nav-btn" data-page="sales">↗ Satışlar</button>
+      <button class="nav-btn" data-page="products">▤ Məhsullar və stok</button>
+      <button class="nav-btn" data-page="receipts">⇩ Mal qəbulu</button>
+      <button class="nav-btn" data-page="cash">▣ Kassa və bank</button>
+      <button class="nav-btn" data-page="expenses">− Xərclər</button>
+      <button class="nav-btn" data-page="customers">♙ Müştərilər</button>
+      <button class="nav-btn" data-page="reports">▥ Hesabatlar</button>
+      <button class="nav-btn" data-page="close">◷ Gün sonu</button>
+      <button class="nav-btn" data-page="staff" data-admin>♟ İşçilər</button>
+      <button class="nav-btn" data-page="settings" data-admin>⚙ Parametrlər</button>
+    </nav>
+    <button id="logoutBtn" class="logout">Çıxış</button>
+  </aside>
+  <main class="main">
+    <header class="topbar"><div><b id="pageHeading">Ümumi panel</b><small>AZN · Asia/Baku</small></div><div class="topright"><span id="connection" class="tag">Bağlantı yoxlanır</span><span id="today"></span></div></header>
+    <div class="content">
+      <div id="globalNotice" class="notice hidden"></div>
+      <section id="page-dashboard" class="page active">
+        <div class="pagehead"><div><h1>Dashboard</h1><p>Mağazaların cari göstəriciləri</p></div></div>
+        <div class="metrics">
+          <article class="metric"><small>Bugünkü satış</small><strong id="mSales">0.00 ₼</strong></article>
+          <article class="metric"><small>Satış sayı</small><strong id="mCount">0</strong></article>
+          <article class="metric"><small>Bugünkü xərclər</small><strong id="mExpenses">0.00 ₼</strong></article>
+          <article class="metric"><small>Nağd + POS + köçürmə</small><strong id="mPayments">0.00 ₼</strong></article>
+        </div>
+        <div class="two-col"><article class="card"><h2>Mağazalar üzrə satış</h2><div id="storeSummary" class="store-grid"></div></article><article class="card"><h2>Son əməliyyatlar</h2><div id="recentActivity" class="activity muted">Məlumat yüklənir…</div></article></div>
+      </section>
+
+      <section id="page-stores" class="page">
+        <div class="pagehead"><div><h1>Mağazalar</h1><p>Mağazalar və filiallar üzrə göstəricilər</p></div><button class="primary" id="addStoreBtn">+ Mağaza əlavə et</button></div>
+        <div id="storesGrid" class="store-grid"></div>
+      </section>
+
+      <section id="page-sales" class="page">
+        <div class="pagehead"><div><h1>Satışlar</h1><p>Satış yarat və öz mağazanın satış tarixçəsinə bax</p></div></div>
+        <form id="saleForm" class="card form-card">
+          <h2>Yeni satış</h2><div class="form-grid">
+            <label>Mağaza<select id="saleStore" required></select></label>
+            <label>Məhsul<select id="saleProduct" required></select></label>
+            <label>Miqdar<input id="saleQty" type="number" min="0.001" step="0.001" value="1" required></label>
+            <label>Vahid qiymət (₼)<input id="salePrice" type="number" min="0" step="0.01" required></label>
+            <label>Ödəniş üsulu<select id="salePayment"><option>Nağd</option><option>POS</option><option>Bank köçürməsi</option><option>Nisyə</option><option>Qarışıq</option></select></label>
+            <label>Müştəri<select id="saleCustomer"><option value="">Müştərisiz satış</option></select></label>
+            <label>Çatdırılma haqqı (₼)<input id="deliveryFee" type="number" min="0" step="0.01" value="0"></label>
+            <label>Xidmət haqqı (₼)<input id="serviceFee" type="number" min="0" step="0.01" value="0"></label>
+            <label>Endirim (₼)<input id="saleDiscount" type="number" min="0" step="0.01" value="0"></label>
+          </div><label>Qeyd<input id="saleNote" placeholder="Əlavə qeyd"></label><div class="form-actions"><strong id="saleTotalPreview">Cəmi: 0.00 ₼</strong><button class="primary" type="submit">Satışı yadda saxla</button></div>
+        </form>
+        <article class="card table-card"><h2>Satış tarixçəsi</h2><div class="table-scroll"><table><thead><tr><th>Tarix</th><th>Mağaza</th><th>Məhsul</th><th>Miqdar</th><th>Məbləğ</th><th>Ödəniş</th><th>Status</th></tr></thead><tbody id="salesTable"></tbody></table></div></article>
+      </section>
+
+      <section id="page-products" class="page">
+        <div class="pagehead"><div><h1>Məhsullar və stok</h1><p>Mərkəzi məhsul kataloqu və mağaza üzrə qalıqlar</p></div></div>
+        <form id="productForm" class="card form-card"><h2>Yeni məhsul</h2><div class="form-grid">
+          <label>Məhsul adı<input id="productName" required></label><label>Kod / SKU<input id="productCode"></label><label>Barkod<input id="productBarcode"></label><label>Satış qiyməti (₼)<input id="productPrice" type="number" min="0" step="0.01" required></label><label>Minimum stok xəbərdarlığı<input id="productMin" type="number" min="0" value="0"></label>
+        </div><button class="primary">Məhsul yarat</button></form>
+        <article class="card table-card"><h2>Məhsul siyahısı</h2><div class="table-scroll"><table><thead><tr><th>Kod</th><th>Məhsul</th><th>Barkod</th><th>Qiymət</th><th>Mağaza qalıqları</th></tr></thead><tbody id="productsTable"></tbody></table></div></article>
+      </section>
+
+      <section id="page-receipts" class="page">
+        <div class="pagehead"><div><h1>Mal qəbulu</h1><p>Abşeron və Dərnəgül anbarlarından mağazalara təhvil</p></div></div>
+        <form id="receiptForm" class="card form-card"><h2>Mal qəbulu / təhvil sənədi</h2><div class="form-grid">
+          <label>Qəbul məntəqəsi<select id="receiptWarehouse"><option>Abşeron Anbar</option><option>Dərnəgül Anbar</option></select></label>
+          <label>Mağaza<select id="receiptStore"></select></label><label>Məhsul<select id="receiptProduct"></select></label><label>Miqdar<input id="receiptQty" type="number" min="0.001" step="0.001" required></label>
+        </div><label>Qeyd<input id="receiptNote"></label><button class="primary">Qəbul sənədi yarat</button></form>
+        <article class="card table-card"><h2>Qəbul tarixçəsi</h2><div id="receiptsList" class="activity"></div></article>
+      </section>
+
+      <section id="page-cash" class="page">
+        <div class="pagehead"><div><h1>Kassa və bank</h1><p>Nağd, POS terminal və bank köçürməsi</p></div></div>
+        <div class="metrics three"><article class="metric"><small>Nağd</small><strong id="cashNaqd">0.00 ₼</strong></article><article class="metric"><small>POS</small><strong id="cashPos">0.00 ₼</strong></article><article class="metric"><small>Bank köçürməsi</small><strong id="cashBank">0.00 ₼</strong></article></div>
+        <article class="card"><p class="muted">Bu cəmlər qeydə alınmış satış ödənişlərindən hesablanır. Bank və POS provayderlərinin faktiki hesablaşmaları üçün ayrıca API inteqrasiyası tələb olunur.</p><div id="cashDetails"></div></article>
+      </section>
+
+      <section id="page-expenses" class="page">
+        <div class="pagehead"><div><h1>Xərclər</h1><p>Mağaza üzrə xərc qeydiyyatı</p></div></div>
+        <form id="expenseForm" class="card form-card"><h2>Yeni xərc</h2><div class="form-grid">
+          <label>Mağaza<select id="expenseStore"></select></label><label>Kateqoriya<select id="expenseCategory"><option>İcarə</option><option>Əməkhaqqı</option><option>Kommunal</option><option>Çatdırılma</option><option>Təsərrüfat</option><option>Digər</option></select></label><label>Məbləğ (₼)<input id="expenseAmount" type="number" min="0.01" step="0.01" required></label><label>Ödəniş üsulu<select id="expensePayment"><option>Nağd</option><option>POS</option><option>Bank köçürməsi</option></select></label>
+        </div><label>Qeyd<input id="expenseNote"></label><button class="primary">Xərci yadda saxla</button></form>
+        <article class="card table-card"><h2>Xərc tarixçəsi</h2><div id="expensesList"></div></article>
+      </section>
+
+      <section id="page-customers" class="page">
+        <div class="pagehead"><div><h1>Müştərilər</h1><p>Hər mağazanın öz müştəri bazası</p></div></div>
+        <form id="customerForm" class="card form-card"><h2>Yeni müştəri</h2><div class="form-grid"><label>Mağaza<select id="customerStore"></select></label><label>Ad və soyad<input id="customerName" required></label><label>Telefon<input id="customerPhone"></label><label>Ünvan<input id="customerAddress"></label></div><button class="primary">Müştəri əlavə et</button></form>
+        <article class="card table-card"><h2>Müştəri siyahısı</h2><div class="table-scroll"><table><thead><tr><th>Ad</th><th>Telefon</th><th>Mağaza</th><th>Ünvan</th></tr></thead><tbody id="customersTable"></tbody></table></div></article>
+      </section>
+
+      <section id="page-reports" class="page">
+        <div class="pagehead"><div><h1>Hesabatlar</h1><p>Satış, xərc və ödəniş xülasəsi</p></div><button class="secondary" onclick="window.print()">Çap / PDF</button></div>
+        <article class="card" id="reportSummary"></article>
+      </section>
+
+      <section id="page-close" class="page">
+        <div class="pagehead"><div><h1>Gün sonu</h1><p>Gündəlik satış, stok və kassa yekunu</p></div></div>
+        <article class="card"><div class="notice">Bağlanmış günlərin dəyişdirilməzliyi server funksiyası ilə qorunmalıdır. Bu layihə paketində gün bağlama funksiyası Cloud Function vasitəsilə icra edilir.</div><div id="closureState" class="tag">Gün açıqdır</div><div class="form-actions"><button id="closeDayBtn" class="primary">Günü sonlandır</button></div><div id="closureHistory"></div></article>
+      </section>
+
+      <section id="page-staff" class="page">
+        <div class="pagehead"><div><h1>İşçilər</h1><p>İstifadəçilər Firebase Authentication və Firestore profilləri ilə idarə olunur.</p></div></div>
+        <article class="card"><h2>İşçi hesabının yaradılması</h2><p>İşçi hesablarını Firebase Console-da Authentication bölməsindən yaradın, sonra Firestore users kolleksiyasında rol və mağaza təyin edin. Təlimat README faylındadır.</p></article>
+      </section>
+
+      <section id="page-settings" class="page">
+        <div class="pagehead"><div><h1>Parametrlər</h1><p>Layihə və sistem məlumatları</p></div></div>
+        <article class="card"><p><b>Valyuta:</b> AZN</p><p><b>Saat qurşağı:</b> Asia/Baku</p><p><b>Mağazalar:</b> Imperial, Eurohome, Sumqayıt, Abşeron, Vasmoy, Ağ Şəhər</p><p><b>Mal qəbulu məntəqələri:</b> Abşeron Anbar, Dərnəgül Anbar</p><p>Yeni mağaza və rol icazələri üçün Firestore sənədləri və Security Rules yenilənməlidir.</p></article>
+      </section>
+    </div>
+  </main>
+</div>
+<script type="module" src="./app.js"></script>
+</body></html>

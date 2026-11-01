@@ -1,0 +1,1 @@
+GitHub-a public/ qovluğunu, functions/ qovluğunu, firebase.json, firestore.rules, firestore.indexes.json və README_AZ.txt fayllarını yükləyin. firebase-config.js içində öz yeni Firebase Web App config dəyərlərinizi yazın. .firebaserc.example faylını .firebaserc kimi adlandırıb project ID yazmaq olar, amma .firebaserc faylını private saxlayın.
